@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Local config / secrets
+src/config/config.local.php
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+
+# Temporary files
+tmp/
+*.tmp
+*.bak
+*.orig
+
+# Docker / local database data
+docker/mysql/data/
+mysql-data/
+
+# Uploaded/generated files
+src/uploads/
+
+# OS-generated trash
+Thumbs.db
