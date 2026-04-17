@@ -1,13 +1,15 @@
 <?php
 $pageTitle = 'Редактировать доставку';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $errorMessage = null;
 
 $deliveryId = (int)($_GET['id'] ?? 0);
 
 if ($deliveryId <= 0) {
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
     require_once __DIR__ . '/../includes/menu.php';
     ?>
     <main>
@@ -197,6 +199,7 @@ try {
     $errorMessage = $e->getMessage();
 }
 
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

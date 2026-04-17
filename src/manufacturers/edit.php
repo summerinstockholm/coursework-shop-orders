@@ -1,13 +1,15 @@
 <?php
 $pageTitle = 'Редактировать производителя';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $errorMessage = null;
 
 $manufacturerId = (int)($_GET['id'] ?? 0);
 
 if ($manufacturerId <= 0) {
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
     require_once __DIR__ . '/../includes/menu.php';
     ?>
     <main>
@@ -88,6 +90,7 @@ try {
     $errorMessage = 'Произошла непредвиденная ошибка при редактировании производителя.';
 }
 
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

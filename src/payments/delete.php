@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Удаление оплаты';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $paymentId = (int)($_GET['id'] ?? 0);
 
@@ -51,6 +51,8 @@ if ($paymentId <= 0) {
     }
 }
 
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

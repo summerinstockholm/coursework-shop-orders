@@ -1,8 +1,6 @@
 <?php
 $pageTitle = 'Добавить покупателя';
 
-require_once __DIR__ . '/../includes/header.php';
-
 $errorMessage = null;
 
 $formData = [
@@ -17,6 +15,8 @@ $formData = [
     'apartment'   => '',
     'postal_code' => '',
 ];
+
+require_once __DIR__ . '/../includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($formData as $key => $value) {
@@ -94,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

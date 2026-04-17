@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Удаление склада';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $warehouseId = (int)($_GET['id'] ?? 0);
 
@@ -51,6 +51,8 @@ if ($warehouseId <= 0) {
     }
 }
 
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

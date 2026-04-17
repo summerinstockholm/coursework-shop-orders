@@ -1,13 +1,15 @@
 <?php
 $pageTitle = 'Редактировать покупателя';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $errorMessage = null;
 
 $customerId = (int)($_GET['id'] ?? 0);
 
 if ($customerId <= 0) {
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
     require_once __DIR__ . '/../includes/menu.php';
     ?>
     <main>
@@ -133,6 +135,7 @@ try {
     $errorMessage = $e->getMessage();
 }
 
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

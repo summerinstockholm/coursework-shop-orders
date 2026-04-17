@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Удаление доставки';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $deliveryId = (int)($_GET['id'] ?? 0);
 
@@ -51,6 +51,8 @@ if ($deliveryId <= 0) {
     }
 }
 
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 

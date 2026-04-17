@@ -1,13 +1,15 @@
 <?php
 $pageTitle = 'Редактировать категорию';
 
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $errorMessage = null;
 
 $categoryId = (int)($_GET['id'] ?? 0);
 
 if ($categoryId <= 0) {
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/header.php';
     require_once __DIR__ . '/../includes/menu.php';
     ?>
     <main>
@@ -82,6 +84,7 @@ try {
     $errorMessage = $e->getMessage();
 }
 
+require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
 
