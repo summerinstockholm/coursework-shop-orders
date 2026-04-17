@@ -88,8 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             header('Location: ' . base_url('customers/list.php'));
             exit;
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                if (str_contains($e->getMessage(), 'uk_customers_email')) {
+                    $errorMessage = 'Покупатель с таким email уже существует.';
+                } else {
+                    $errorMessage = 'Не удалось сохранить покупателя: нарушено ограничение уникальности.';
+                }
+            } else {
+                $errorMessage = 'Не удалось сохранить покупателя.';
+            }
         } catch (Throwable $e) {
-            $errorMessage = $e->getMessage();
+            $errorMessage = 'Произошла непредвиденная ошибка при сохранении покупателя.';
         }
     }
 }

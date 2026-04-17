@@ -1,15 +1,12 @@
 <?php
 $pageTitle = 'Редактировать покупателя';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
 
 $customerId = (int)($_GET['id'] ?? 0);
 
 if ($customerId <= 0) {
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/header.php';
+    require_once __DIR__ . '/../includes/header.php';
     require_once __DIR__ . '/../includes/menu.php';
     ?>
     <main>
@@ -42,6 +39,8 @@ $formData = [
     'apartment'   => '',
     'postal_code' => '',
 ];
+
+require_once __DIR__ . '/../includes/db.php';
 
 try {
     $pdo = db();
@@ -131,8 +130,18 @@ try {
             }
         }
     }
+} catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        if (str_contains($e->getMessage(), 'uk_customers_email')) {
+            $errorMessage = 'Покупатель с таким email уже существует.';
+        } else {
+            $errorMessage = 'Не удалось сохранить изменения: нарушено ограничение уникальности.';
+        }
+    } else {
+        $errorMessage = 'Не удалось обновить покупателя.';
+    }
 } catch (Throwable $e) {
-    $errorMessage = $e->getMessage();
+    $errorMessage = 'Произошла непредвиденная ошибка при редактировании покупателя.';
 }
 
 require_once __DIR__ . '/../includes/header.php';
