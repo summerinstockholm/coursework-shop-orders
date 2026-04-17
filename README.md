@@ -97,7 +97,7 @@ docker compose version
 Если проект в Git:
 
 ```bash
-git clone <repo_url>
+git clone git@github.com:summerinstockholm/coursework-shop-orders.git
 cd coursework-shop-orders
 ```
 
