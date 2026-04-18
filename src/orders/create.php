@@ -1,18 +1,17 @@
 <?php
 $pageTitle = 'Добавить заказ';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
 
 $formData = [
     'order_date' => date('Y-m-d\TH:i'),
     'status' => 'новый',
-    'total_amount' => '0.00',
     'customer_id' => '',
     'payment_method' => '',
     'delivery_method' => '',
     'delivery_address' => '',
+    'product_id' => '',
+    'quantity' => '1',
 ];
 
 $statuses = [
@@ -38,6 +37,9 @@ $deliveryMethods = [
 ];
 
 $customers = [];
+$products = [];
+
+require_once __DIR__ . '/../includes/db.php';
 
 try {
     $pdo = db();
@@ -56,6 +58,19 @@ try {
          ORDER BY last_name ASC, first_name ASC, middle_name ASC'
     )->fetchAll();
 
+    $products = $pdo->query(
+        'SELECT
+            p.product_id,
+            p.product_name,
+            p.price,
+            p.stock_qty,
+            w.warehouse_name
+         FROM products p
+         INNER JOIN warehouses w ON w.warehouse_id = p.warehouse_id
+         WHERE p.stock_qty > 0
+         ORDER BY p.product_name ASC, w.warehouse_name ASC'
+    )->fetchAll();
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($formData as $key => $value) {
             $formData[$key] = trim((string)($_POST[$key] ?? ''));
@@ -64,11 +79,12 @@ try {
         $requiredFields = [
             'order_date' => 'Дата заказа',
             'status' => 'Статус',
-            'total_amount' => 'Сумма',
             'customer_id' => 'Покупатель',
             'payment_method' => 'Способ оплаты',
             'delivery_method' => 'Способ доставки',
             'delivery_address' => 'Адрес доставки',
+            'product_id' => 'Товар',
+            'quantity' => 'Количество',
         ];
 
         foreach ($requiredFields as $field => $label) {
@@ -94,59 +110,164 @@ try {
             $errorMessage = 'Некорректный покупатель.';
         }
 
-        if ($errorMessage === null && !is_numeric($formData['total_amount'])) {
-            $errorMessage = 'Поле «Сумма» должно быть числом.';
+        if ($errorMessage === null && !ctype_digit($formData['product_id'])) {
+            $errorMessage = 'Некорректный товар.';
         }
 
-        if ($errorMessage === null && (float)$formData['total_amount'] < 0) {
-            $errorMessage = 'Поле «Сумма» не может быть отрицательным.';
+        if ($errorMessage === null && (!ctype_digit($formData['quantity']) || (int)$formData['quantity'] <= 0)) {
+            $errorMessage = 'Количество должно быть положительным целым числом.';
         }
 
         if ($errorMessage === null) {
-            $orderDate = str_replace('T', ' ', $formData['order_date']);
+            $orderDate = DateTime::createFromFormat('Y-m-d\TH:i', $formData['order_date']);
+            if (!$orderDate || $orderDate->format('Y-m-d\TH:i') !== $formData['order_date']) {
+                $errorMessage = 'Некорректная дата заказа.';
+            }
+        }
 
-            $stmt = $pdo->prepare(
-                'INSERT INTO orders
-                (
-                    order_date,
-                    status,
-                    total_amount,
-                    customer_id,
-                    payment_method,
-                    delivery_method,
-                    delivery_address
-                )
-                VALUES
-                (
-                    :order_date,
-                    :status,
-                    :total_amount,
-                    :customer_id,
-                    :payment_method,
-                    :delivery_method,
-                    :delivery_address
-                )'
+        if ($errorMessage === null) {
+            $customerCheckStmt = $pdo->prepare(
+                'SELECT customer_id
+                 FROM customers
+                 WHERE customer_id = :customer_id'
             );
 
-            $stmt->execute([
-                ':order_date' => $orderDate,
-                ':status' => $formData['status'],
-                ':total_amount' => $formData['total_amount'],
+            $customerCheckStmt->execute([
                 ':customer_id' => (int)$formData['customer_id'],
-                ':payment_method' => $formData['payment_method'],
-                ':delivery_method' => $formData['delivery_method'],
-                ':delivery_address' => $formData['delivery_address'],
             ]);
 
-            header('Location: ' . base_url('orders/list.php'));
-            exit;
+            if (!$customerCheckStmt->fetch()) {
+                $errorMessage = 'Выбранный покупатель не найден.';
+            }
+        }
+
+        if ($errorMessage === null) {
+            try {
+                $pdo->beginTransaction();
+
+                $productStmt = $pdo->prepare(
+                    'SELECT
+                        product_id,
+                        product_name,
+                        price,
+                        stock_qty
+                     FROM products
+                     WHERE product_id = :product_id
+                     FOR UPDATE'
+                );
+
+                $productStmt->execute([
+                    ':product_id' => (int)$formData['product_id'],
+                ]);
+
+                $product = $productStmt->fetch();
+
+                if (!$product) {
+                    $errorMessage = 'Выбранный товар не найден.';
+                    $pdo->rollBack();
+                } else {
+                    $requestedQty = (int)$formData['quantity'];
+                    $availableQty = (int)$product['stock_qty'];
+
+                    if ($availableQty < $requestedQty) {
+                        $errorMessage = 'Недостаточно товара на складе для оформления заказа.';
+                        $pdo->rollBack();
+                    } else {
+                        $unitPrice = (float)$product['price'];
+                        $lineTotal = $unitPrice * $requestedQty;
+                        $orderDateSql = str_replace('T', ' ', $formData['order_date']);
+
+                        $insertOrderStmt = $pdo->prepare(
+                            'INSERT INTO orders
+                            (
+                                order_date,
+                                status,
+                                total_amount,
+                                customer_id,
+                                payment_method,
+                                delivery_method,
+                                delivery_address
+                            )
+                            VALUES
+                            (
+                                :order_date,
+                                :status,
+                                :total_amount,
+                                :customer_id,
+                                :payment_method,
+                                :delivery_method,
+                                :delivery_address
+                            )'
+                        );
+
+                        $insertOrderStmt->execute([
+                            ':order_date' => $orderDateSql,
+                            ':status' => $formData['status'],
+                            ':total_amount' => $lineTotal,
+                            ':customer_id' => (int)$formData['customer_id'],
+                            ':payment_method' => $formData['payment_method'],
+                            ':delivery_method' => $formData['delivery_method'],
+                            ':delivery_address' => $formData['delivery_address'],
+                        ]);
+
+                        $orderId = (int)$pdo->lastInsertId();
+
+                        $insertItemStmt = $pdo->prepare(
+                            'INSERT INTO order_items
+                            (
+                                order_id,
+                                product_id,
+                                quantity,
+                                unit_price,
+                                line_total
+                            )
+                            VALUES
+                            (
+                                :order_id,
+                                :product_id,
+                                :quantity,
+                                :unit_price,
+                                :line_total
+                            )'
+                        );
+
+                        $insertItemStmt->execute([
+                            ':order_id' => $orderId,
+                            ':product_id' => (int)$product['product_id'],
+                            ':quantity' => $requestedQty,
+                            ':unit_price' => $unitPrice,
+                            ':line_total' => $lineTotal,
+                        ]);
+
+                        $updateStockStmt = $pdo->prepare(
+                            'UPDATE products
+                             SET stock_qty = stock_qty - :quantity
+                             WHERE product_id = :product_id'
+                        );
+
+                        $updateStockStmt->execute([
+                            ':quantity' => $requestedQty,
+                            ':product_id' => (int)$product['product_id'],
+                        ]);
+
+                        $pdo->commit();
+
+                        header('Location: ' . base_url('orders/view.php?id=' . $orderId));
+                        exit;
+                    }
+                }
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $errorMessage = 'Не удалось создать заказ.';
+            }
         }
     }
 } catch (Throwable $e) {
     $errorMessage = $e->getMessage();
 }
 
-require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
@@ -163,13 +284,18 @@ require_once __DIR__ . '/../includes/menu.php';
 
         <?php if ($errorMessage !== null): ?>
             <div class="error-box">
-                <strong>Ошибка:</strong> <?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?>
+                <strong>Ошибка:</strong>
+                <?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?>
             </div>
         <?php endif; ?>
 
         <?php if (empty($customers)): ?>
             <div class="error-box">
                 <strong>Ошибка:</strong> Невозможно создать заказ, пока в системе нет ни одного покупателя.
+            </div>
+        <?php elseif (empty($products)): ?>
+            <div class="error-box">
+                <strong>Ошибка:</strong> Невозможно создать заказ, пока в системе нет товаров с положительным остатком.
             </div>
         <?php else: ?>
             <form method="post" action="<?= htmlspecialchars(base_url('orders/create.php'), ENT_QUOTES, 'UTF-8') ?>">
@@ -200,47 +326,23 @@ require_once __DIR__ . '/../includes/menu.php';
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="total_amount">Сумма *</label>
-                        <input
-                            type="number"
-                            id="total_amount"
-                            name="total_amount"
-                            step="0.01"
-                            min="0"
-                            value="<?= htmlspecialchars($formData['total_amount'], ENT_QUOTES, 'UTF-8') ?>"
-                            required
-                        >
-                    </div>
-
-                    <div class="form-group">
+                    <div class="form-group form-group-full">
                         <label for="customer_id">Покупатель *</label>
                         <select id="customer_id" name="customer_id" required>
                             <option value="">Выберите покупателя</option>
                             <?php foreach ($customers as $customer): ?>
                                 <?php
-                                $fullName = trim(
+                                $customerFullName = trim(
                                     (string)$customer['last_name'] . ' ' .
                                     (string)$customer['first_name'] . ' ' .
                                     (string)($customer['middle_name'] ?? '')
-                                );
-
-                                $address = trim(
-                                    (string)$customer['city'] . ', ' .
-                                    (string)$customer['street'] . ', д. ' .
-                                    (string)$customer['house'] .
-                                    (
-                                        ($customer['apartment'] ?? '') !== ''
-                                            ? ', кв. ' . (string)$customer['apartment']
-                                            : ''
-                                    )
                                 );
                                 ?>
                                 <option
                                     value="<?= (int)$customer['customer_id'] ?>"
                                     <?= $formData['customer_id'] === (string)$customer['customer_id'] ? 'selected' : '' ?>
                                 >
-                                    <?= htmlspecialchars($fullName . ' — ' . $address, ENT_QUOTES, 'UTF-8') ?>
+                                    <?= htmlspecialchars($customerFullName, ENT_QUOTES, 'UTF-8') ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -278,11 +380,47 @@ require_once __DIR__ . '/../includes/menu.php';
 
                     <div class="form-group form-group-full">
                         <label for="delivery_address">Адрес доставки *</label>
-                        <textarea
+                        <input
+                            type="text"
                             id="delivery_address"
                             name="delivery_address"
+                            value="<?= htmlspecialchars($formData['delivery_address'], ENT_QUOTES, 'UTF-8') ?>"
                             required
-                        ><?= htmlspecialchars($formData['delivery_address'], ENT_QUOTES, 'UTF-8') ?></textarea>
+                        >
+                    </div>
+
+                    <div class="form-group form-group-full">
+                        <label for="product_id">Товар *</label>
+                        <select id="product_id" name="product_id" required>
+                            <option value="">Выберите товар</option>
+                            <?php foreach ($products as $product): ?>
+                                <?php
+                                $productText = (string)$product['product_name']
+                                    . ' — ' . (string)$product['warehouse_name']
+                                    . ' — остаток: ' . (int)$product['stock_qty']
+                                    . ' — цена: ' . number_format((float)$product['price'], 2, '.', ' ');
+                                ?>
+                                <option
+                                    value="<?= (int)$product['product_id'] ?>"
+                                    <?= $formData['product_id'] === (string)$product['product_id'] ? 'selected' : '' ?>
+                                >
+                                    <?= htmlspecialchars($productText, ENT_QUOTES, 'UTF-8') ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quantity">Количество *</label>
+                        <input
+                            type="number"
+                            id="quantity"
+                            name="quantity"
+                            min="1"
+                            step="1"
+                            value="<?= htmlspecialchars($formData['quantity'], ENT_QUOTES, 'UTF-8') ?>"
+                            required
+                        >
                     </div>
                 </div>
 
