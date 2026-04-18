@@ -1,34 +1,8 @@
 <?php
 $pageTitle = 'Редактировать товар';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
-
 $productId = (int)($_GET['id'] ?? 0);
-
-if ($productId <= 0) {
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/header.php';
-    require_once __DIR__ . '/../includes/menu.php';
-    ?>
-    <main>
-        <section class="card">
-            <h2>Редактировать товар</h2>
-            <div class="error-box">
-                <strong>Ошибка:</strong> Некорректный идентификатор товара.
-            </div>
-            <p>
-                <a href="<?= htmlspecialchars(base_url('products/list.php'), ENT_QUOTES, 'UTF-8') ?>">
-                    ← Вернуться к списку товаров
-                </a>
-            </p>
-        </section>
-    </main>
-    <?php
-    require_once __DIR__ . '/../includes/footer.php';
-    exit;
-}
 
 $formData = [
     'product_name' => '',
@@ -43,6 +17,12 @@ $formData = [
 $categories = [];
 $manufacturers = [];
 $warehouses = [];
+
+require_once __DIR__ . '/../includes/db.php';
+
+if ($productId <= 0) {
+    $errorMessage = 'Некорректный идентификатор товара.';
+}
 
 try {
     $pdo = db();
@@ -65,7 +45,7 @@ try {
          ORDER BY warehouse_name ASC'
     )->fetchAll();
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($errorMessage === null && $_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($formData as $key => $value) {
             $formData[$key] = trim((string)($_POST[$key] ?? ''));
         }
@@ -73,7 +53,7 @@ try {
         $requiredFields = [
             'product_name' => 'Название товара',
             'price' => 'Цена',
-            'stock_qty' => 'Остаток',
+            'stock_qty' => 'Количество на складе',
             'category_id' => 'Категория',
             'manufacturer_id' => 'Производитель',
             'warehouse_id' => 'Склад',
@@ -86,12 +66,16 @@ try {
             }
         }
 
-        if ($errorMessage === null && !is_numeric($formData['price'])) {
-            $errorMessage = 'Поле «Цена» должно быть числом.';
+        if ($errorMessage === null) {
+            if (!is_numeric($formData['price']) || (float)$formData['price'] < 0) {
+                $errorMessage = 'Цена должна быть числом больше или равным 0.';
+            }
         }
 
-        if ($errorMessage === null && (!ctype_digit($formData['stock_qty']) || (int)$formData['stock_qty'] < 0)) {
-            $errorMessage = 'Поле «Остаток» должно быть неотрицательным целым числом.';
+        if ($errorMessage === null) {
+            if (!ctype_digit($formData['stock_qty']) || (int)$formData['stock_qty'] < 0) {
+                $errorMessage = 'Количество на складе должно быть целым числом больше или равным 0.';
+            }
         }
 
         if ($errorMessage === null && !ctype_digit($formData['category_id'])) {
@@ -107,34 +91,56 @@ try {
         }
 
         if ($errorMessage === null) {
-            $stmt = $pdo->prepare(
-                'UPDATE products
-                 SET
-                    product_name = :product_name,
-                    description = :description,
-                    price = :price,
-                    stock_qty = :stock_qty,
-                    category_id = :category_id,
-                    manufacturer_id = :manufacturer_id,
-                    warehouse_id = :warehouse_id
-                 WHERE product_id = :product_id'
+            $checkStmt = $pdo->prepare(
+                'SELECT product_id
+                 FROM products
+                 WHERE product_name = :product_name
+                   AND warehouse_id = :warehouse_id
+                   AND product_id <> :product_id'
             );
 
-            $stmt->execute([
+            $checkStmt->execute([
                 ':product_name' => $formData['product_name'],
-                ':description' => $formData['description'] !== '' ? $formData['description'] : null,
-                ':price' => $formData['price'],
-                ':stock_qty' => (int)$formData['stock_qty'],
-                ':category_id' => (int)$formData['category_id'],
-                ':manufacturer_id' => (int)$formData['manufacturer_id'],
                 ':warehouse_id' => (int)$formData['warehouse_id'],
                 ':product_id' => $productId,
             ]);
 
-            header('Location: ' . base_url('products/list.php'));
-            exit;
+            $existingProduct = $checkStmt->fetch();
+
+            if ($existingProduct) {
+                $errorMessage = 'Товар с таким названием уже существует на выбранном складе.';
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE products
+                     SET
+                        product_name = :product_name,
+                        description = :description,
+                        price = :price,
+                        stock_qty = :stock_qty,
+                        category_id = :category_id,
+                        manufacturer_id = :manufacturer_id,
+                        warehouse_id = :warehouse_id
+                     WHERE product_id = :product_id'
+                );
+
+                $stmt->execute([
+                    ':product_name' => $formData['product_name'],
+                    ':description' => $formData['description'] !== '' ? $formData['description'] : null,
+                    ':price' => (float)$formData['price'],
+                    ':stock_qty' => (int)$formData['stock_qty'],
+                    ':category_id' => (int)$formData['category_id'],
+                    ':manufacturer_id' => (int)$formData['manufacturer_id'],
+                    ':warehouse_id' => (int)$formData['warehouse_id'],
+                    ':product_id' => $productId,
+                ]);
+
+                header('Location: ' . base_url('products/list.php'));
+                exit;
+            }
         }
-    } else {
+    }
+
+    if ($errorMessage === null && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         $stmt = $pdo->prepare(
             'SELECT
                 product_id,
@@ -158,17 +164,19 @@ try {
         if (!$product) {
             $errorMessage = 'Товар не найден.';
         } else {
-            $formData['product_name'] = (string)$product['product_name'];
-            $formData['description'] = (string)($product['description'] ?? '');
-            $formData['price'] = (string)$product['price'];
-            $formData['stock_qty'] = (string)$product['stock_qty'];
-            $formData['category_id'] = (string)$product['category_id'];
-            $formData['manufacturer_id'] = (string)$product['manufacturer_id'];
-            $formData['warehouse_id'] = (string)$product['warehouse_id'];
+            foreach ($formData as $key => $value) {
+                $formData[$key] = (string)($product[$key] ?? '');
+            }
         }
     }
+} catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        $errorMessage = 'Товар с таким названием уже существует на выбранном складе.';
+    } else {
+        $errorMessage = 'Не удалось сохранить изменения товара.';
+    }
 } catch (Throwable $e) {
-    $errorMessage = $e->getMessage();
+    $errorMessage = 'Произошла непредвиденная ошибка при редактировании товара.';
 }
 
 require_once __DIR__ . '/../includes/header.php';
@@ -191,10 +199,10 @@ require_once __DIR__ . '/../includes/menu.php';
             </div>
         <?php endif; ?>
 
-        <?php if ($errorMessage === null || $_SERVER['REQUEST_METHOD'] === 'POST'): ?>
+        <?php if ($productId > 0 && ($errorMessage === null || $_SERVER['REQUEST_METHOD'] === 'POST')): ?>
             <form method="post" action="<?= htmlspecialchars(base_url('products/edit.php?id=' . $productId), ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-grid">
-                    <div class="form-group">
+                    <div class="form-group form-group-full">
                         <label for="product_name">Название товара *</label>
                         <input
                             type="text"
@@ -203,6 +211,15 @@ require_once __DIR__ . '/../includes/menu.php';
                             value="<?= htmlspecialchars($formData['product_name'], ENT_QUOTES, 'UTF-8') ?>"
                             required
                         >
+                    </div>
+
+                    <div class="form-group form-group-full">
+                        <label for="description">Описание</label>
+                        <textarea
+                            id="description"
+                            name="description"
+                            rows="4"
+                        ><?= htmlspecialchars($formData['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
                     </div>
 
                     <div class="form-group">
@@ -219,13 +236,13 @@ require_once __DIR__ . '/../includes/menu.php';
                     </div>
 
                     <div class="form-group">
-                        <label for="stock_qty">Остаток *</label>
+                        <label for="stock_qty">Количество на складе *</label>
                         <input
                             type="number"
                             id="stock_qty"
                             name="stock_qty"
-                            min="0"
                             step="1"
+                            min="0"
                             value="<?= htmlspecialchars($formData['stock_qty'], ENT_QUOTES, 'UTF-8') ?>"
                             required
                         >
@@ -274,14 +291,6 @@ require_once __DIR__ . '/../includes/menu.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
-
-                    <div class="form-group form-group-full">
-                        <label for="description">Описание</label>
-                        <textarea
-                            id="description"
-                            name="description"
-                        ><?= htmlspecialchars($formData['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
                     </div>
                 </div>
 

@@ -1,8 +1,6 @@
 <?php
 $pageTitle = 'Добавить товар';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
 
 $formData = [
@@ -18,6 +16,8 @@ $formData = [
 $categories = [];
 $manufacturers = [];
 $warehouses = [];
+
+require_once __DIR__ . '/../includes/db.php';
 
 try {
     $pdo = db();
@@ -48,7 +48,7 @@ try {
         $requiredFields = [
             'product_name' => 'Название товара',
             'price' => 'Цена',
-            'stock_qty' => 'Остаток',
+            'stock_qty' => 'Количество на складе',
             'category_id' => 'Категория',
             'manufacturer_id' => 'Производитель',
             'warehouse_id' => 'Склад',
@@ -61,12 +61,16 @@ try {
             }
         }
 
-        if ($errorMessage === null && !is_numeric($formData['price'])) {
-            $errorMessage = 'Поле «Цена» должно быть числом.';
+        if ($errorMessage === null) {
+            if (!is_numeric($formData['price']) || (float)$formData['price'] < 0) {
+                $errorMessage = 'Цена должна быть числом больше или равным 0.';
+            }
         }
 
-        if ($errorMessage === null && (!ctype_digit($formData['stock_qty']) || (int)$formData['stock_qty'] < 0)) {
-            $errorMessage = 'Поле «Остаток» должно быть неотрицательным целым числом.';
+        if ($errorMessage === null) {
+            if (!ctype_digit($formData['stock_qty']) || (int)$formData['stock_qty'] < 0) {
+                $errorMessage = 'Количество на складе должно быть целым числом больше или равным 0.';
+            }
         }
 
         if ($errorMessage === null && !ctype_digit($formData['category_id'])) {
@@ -82,6 +86,40 @@ try {
         }
 
         if ($errorMessage === null) {
+            $existingStmt = $pdo->prepare(
+                'SELECT
+                    product_id,
+                    stock_qty
+                 FROM products
+                 WHERE product_name = :product_name
+                   AND warehouse_id = :warehouse_id'
+            );
+
+            $existingStmt->execute([
+                ':product_name' => $formData['product_name'],
+                ':warehouse_id' => (int)$formData['warehouse_id'],
+            ]);
+
+            $existingProduct = $existingStmt->fetch();
+
+            if ($existingProduct) {
+                $newStockQty = (int)$existingProduct['stock_qty'] + (int)$formData['stock_qty'];
+
+                $updateStmt = $pdo->prepare(
+                    'UPDATE products
+                     SET stock_qty = :stock_qty
+                     WHERE product_id = :product_id'
+                );
+
+                $updateStmt->execute([
+                    ':stock_qty' => $newStockQty,
+                    ':product_id' => (int)$existingProduct['product_id'],
+                ]);
+
+                header('Location: ' . base_url('products/list.php'));
+                exit;
+            }
+
             $stmt = $pdo->prepare(
                 'INSERT INTO products
                 (
@@ -108,7 +146,7 @@ try {
             $stmt->execute([
                 ':product_name' => $formData['product_name'],
                 ':description' => $formData['description'] !== '' ? $formData['description'] : null,
-                ':price' => $formData['price'],
+                ':price' => (float)$formData['price'],
                 ':stock_qty' => (int)$formData['stock_qty'],
                 ':category_id' => (int)$formData['category_id'],
                 ':manufacturer_id' => (int)$formData['manufacturer_id'],
@@ -119,11 +157,16 @@ try {
             exit;
         }
     }
+} catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        $errorMessage = 'Товар с таким названием уже существует на выбранном складе.';
+    } else {
+        $errorMessage = 'Не удалось сохранить товар.';
+    }
 } catch (Throwable $e) {
-    $errorMessage = $e->getMessage();
+    $errorMessage = 'Произошла непредвиденная ошибка при сохранении товара.';
 }
 
-require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
@@ -146,7 +189,7 @@ require_once __DIR__ . '/../includes/menu.php';
 
         <form method="post" action="<?= htmlspecialchars(base_url('products/create.php'), ENT_QUOTES, 'UTF-8') ?>">
             <div class="form-grid">
-                <div class="form-group">
+                <div class="form-group form-group-full">
                     <label for="product_name">Название товара *</label>
                     <input
                         type="text"
@@ -155,6 +198,15 @@ require_once __DIR__ . '/../includes/menu.php';
                         value="<?= htmlspecialchars($formData['product_name'], ENT_QUOTES, 'UTF-8') ?>"
                         required
                     >
+                </div>
+
+                <div class="form-group form-group-full">
+                    <label for="description">Описание</label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="4"
+                    ><?= htmlspecialchars($formData['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
 
                 <div class="form-group">
@@ -171,13 +223,13 @@ require_once __DIR__ . '/../includes/menu.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="stock_qty">Остаток *</label>
+                    <label for="stock_qty">Количество на складе *</label>
                     <input
                         type="number"
                         id="stock_qty"
                         name="stock_qty"
-                        min="0"
                         step="1"
+                        min="0"
                         value="<?= htmlspecialchars($formData['stock_qty'], ENT_QUOTES, 'UTF-8') ?>"
                         required
                     >
@@ -226,14 +278,6 @@ require_once __DIR__ . '/../includes/menu.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                </div>
-
-                <div class="form-group form-group-full">
-                    <label for="description">Описание</label>
-                    <textarea
-                        id="description"
-                        name="description"
-                    ><?= htmlspecialchars($formData['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
             </div>
 

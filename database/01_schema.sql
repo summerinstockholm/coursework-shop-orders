@@ -63,6 +63,7 @@ CREATE TABLE products (
     KEY idx_products_category (category_id),
     KEY idx_products_manufacturer (manufacturer_id),
     KEY idx_products_warehouse (warehouse_id),
+    CONSTRAINT uk_products_name_warehouse UNIQUE (product_name, warehouse_id),
     CONSTRAINT fk_products_category
         FOREIGN KEY (category_id) REFERENCES categories(category_id)
         ON UPDATE CASCADE
