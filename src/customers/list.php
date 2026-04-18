@@ -83,7 +83,7 @@ require_once __DIR__ . '/../includes/menu.php';
                                 <td><?= htmlspecialchars((string)$customer['house'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)($customer['apartment'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)$customer['postal_code'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td>
+                                <td class="actions-cell">
                                     <a href="<?= htmlspecialchars(base_url('customers/edit.php?id=' . (int)$customer['customer_id']), ENT_QUOTES, 'UTF-8') ?>">
                                         Редактировать
                                     </a>

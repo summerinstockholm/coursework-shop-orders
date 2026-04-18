@@ -68,7 +68,7 @@ require_once __DIR__ . '/../includes/menu.php';
                                 <td><?= htmlspecialchars((string)$warehouse['street'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)$warehouse['house'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)($warehouse['comment'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                                <td>
+                                <td class="actions-cell">
                                     <a href="<?= htmlspecialchars(base_url('warehouses/edit.php?id=' . (int)$warehouse['warehouse_id']), ENT_QUOTES, 'UTF-8') ?>">
                                         Редактировать
                                     </a>

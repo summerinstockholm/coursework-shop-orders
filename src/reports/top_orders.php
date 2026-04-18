@@ -78,7 +78,7 @@ require_once __DIR__ . '/../includes/menu.php';
                                 <td><?= number_format((float)$order['total_amount'], 2, '.', ' ') ?></td>
                                 <td><?= htmlspecialchars((string)$order['payment_method'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)$order['delivery_method'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td>
+                                <td class="actions-cell">
                                     <a href="<?= htmlspecialchars(base_url('orders/view.php?id=' . (int)$order['order_id']), ENT_QUOTES, 'UTF-8') ?>">
                                         Открыть
                                     </a>

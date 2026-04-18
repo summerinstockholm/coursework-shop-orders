@@ -77,7 +77,7 @@ require_once __DIR__ . '/../includes/menu.php';
                                 <td><?= htmlspecialchars((string)$product['category_name'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)$product['manufacturer_name'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string)$product['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td>
+                                <td class="actions-cell">
                                     <a href="<?= htmlspecialchars(base_url('products/edit.php?id=' . (int)$product['product_id']), ENT_QUOTES, 'UTF-8') ?>">
                                         Редактировать
                                     </a>
