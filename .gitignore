@@ -19,7 +19,15 @@ src/config/config.local.php
 .env.local
 .env.*.local
 .env.*
+.env.prod
+**/.env.prod
+.htpasswd
+**/.htpasswd
 !.env.example
+
+# Optional local secret directories
+secrets/
+**/secrets/
 
 # Temporary files
 tmp/
