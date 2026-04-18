@@ -1,87 +1,94 @@
 <?php
 $pageTitle = 'Редактировать категорию';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
-
 $categoryId = (int)($_GET['id'] ?? 0);
-
-if ($categoryId <= 0) {
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/header.php';
-    require_once __DIR__ . '/../includes/menu.php';
-    ?>
-    <main>
-        <section class="card">
-            <h2>Редактировать категорию</h2>
-            <div class="error-box">
-                <strong>Ошибка:</strong> Некорректный идентификатор категории.
-            </div>
-            <p>
-                <a href="<?= htmlspecialchars(base_url('categories/list.php'), ENT_QUOTES, 'UTF-8') ?>">
-                    ← Вернуться к списку категорий
-                </a>
-            </p>
-        </section>
-    </main>
-    <?php
-    require_once __DIR__ . '/../includes/footer.php';
-    exit;
-}
 
 $formData = [
     'category_name' => '',
 ];
 
-try {
-    $pdo = db();
+require_once __DIR__ . '/../includes/db.php';
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $formData['category_name'] = trim((string)($_POST['category_name'] ?? ''));
+if ($categoryId <= 0) {
+    $errorMessage = 'Некорректный идентификатор категории.';
+} else {
+    try {
+        $pdo = db();
 
-        if ($formData['category_name'] === '') {
-            $errorMessage = 'Поле «Название категории» обязательно для заполнения.';
-        }
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            foreach ($formData as $key => $value) {
+                $formData[$key] = trim((string)($_POST[$key] ?? ''));
+            }
 
-        if ($errorMessage === null) {
+            if ($formData['category_name'] === '') {
+                $errorMessage = 'Поле «Название категории» обязательно для заполнения.';
+            }
+
+            if ($errorMessage === null) {
+                $checkStmt = $pdo->prepare(
+                    'SELECT category_id
+                     FROM categories
+                     WHERE category_name = :category_name
+                       AND category_id <> :category_id'
+                );
+
+                $checkStmt->execute([
+                    ':category_name' => $formData['category_name'],
+                    ':category_id' => $categoryId,
+                ]);
+
+                $existingCategory = $checkStmt->fetch();
+
+                if ($existingCategory) {
+                    $errorMessage = 'Категория с таким названием уже существует.';
+                } else {
+                    $stmt = $pdo->prepare(
+                        'UPDATE categories
+                         SET
+                            category_name = :category_name
+                         WHERE category_id = :category_id'
+                    );
+
+                    $stmt->execute([
+                        ':category_name' => $formData['category_name'],
+                        ':category_id' => $categoryId,
+                    ]);
+
+                    header('Location: ' . base_url('categories/list.php'));
+                    exit;
+                }
+            }
+        } else {
             $stmt = $pdo->prepare(
-                'UPDATE categories
-                 SET category_name = :category_name
+                'SELECT
+                    category_id,
+                    category_name
+                 FROM categories
                  WHERE category_id = :category_id'
             );
 
             $stmt->execute([
-                ':category_name' => $formData['category_name'],
                 ':category_id' => $categoryId,
             ]);
 
-            header('Location: ' . base_url('categories/list.php'));
-            exit;
+            $category = $stmt->fetch();
+
+            if (!$category) {
+                $errorMessage = 'Категория не найдена.';
+            } else {
+                $formData['category_name'] = (string)$category['category_name'];
+            }
         }
-    } else {
-        $stmt = $pdo->prepare(
-            'SELECT
-                category_id,
-                category_name
-             FROM categories
-             WHERE category_id = :category_id'
-        );
-
-        $stmt->execute([
-            ':category_id' => $categoryId,
-        ]);
-
-        $category = $stmt->fetch();
-
-        if (!$category) {
-            $errorMessage = 'Категория не найдена.';
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            $errorMessage = 'Категория с таким названием уже существует.';
         } else {
-            $formData['category_name'] = (string)$category['category_name'];
+            $errorMessage = 'Не удалось сохранить изменения категории.';
         }
+    } catch (Throwable $e) {
+        $errorMessage = 'Произошла непредвиденная ошибка при редактировании категории.';
     }
-} catch (Throwable $e) {
-    $errorMessage = $e->getMessage();
 }
 
 require_once __DIR__ . '/../includes/header.php';
@@ -104,7 +111,7 @@ require_once __DIR__ . '/../includes/menu.php';
             </div>
         <?php endif; ?>
 
-        <?php if ($errorMessage === null || $_SERVER['REQUEST_METHOD'] === 'POST'): ?>
+        <?php if ($categoryId > 0 && ($errorMessage === null || $_SERVER['REQUEST_METHOD'] === 'POST')): ?>
             <form method="post" action="<?= htmlspecialchars(base_url('categories/edit.php?id=' . $categoryId), ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-grid">
                     <div class="form-group form-group-full">

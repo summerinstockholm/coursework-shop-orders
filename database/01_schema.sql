@@ -46,7 +46,7 @@ CREATE TABLE warehouses (
     house VARCHAR(20) NOT NULL,
     comment VARCHAR(255) NULL,
     PRIMARY KEY (warehouse_id),
-    KEY idx_warehouses_name (warehouse_name)
+    CONSTRAINT uk_warehouses_name UNIQUE (warehouse_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE products (

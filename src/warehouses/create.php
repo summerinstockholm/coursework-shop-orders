@@ -1,8 +1,6 @@
 <?php
 $pageTitle = 'Добавить склад';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
 
 $formData = [
@@ -12,6 +10,8 @@ $formData = [
     'house' => '',
     'comment' => '',
 ];
+
+require_once __DIR__ . '/../includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($formData as $key => $value) {
@@ -36,42 +36,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = db();
 
-            $stmt = $pdo->prepare(
-                'INSERT INTO warehouses
-                (
-                    warehouse_name,
-                    city,
-                    street,
-                    house,
-                    comment
-                )
-                VALUES
-                (
-                    :warehouse_name,
-                    :city,
-                    :street,
-                    :house,
-                    :comment
-                )'
+            $checkStmt = $pdo->prepare(
+                'SELECT warehouse_id
+                 FROM warehouses
+                 WHERE warehouse_name = :warehouse_name'
             );
 
-            $stmt->execute([
+            $checkStmt->execute([
                 ':warehouse_name' => $formData['warehouse_name'],
-                ':city' => $formData['city'],
-                ':street' => $formData['street'],
-                ':house' => $formData['house'],
-                ':comment' => $formData['comment'] !== '' ? $formData['comment'] : null,
             ]);
 
-            header('Location: ' . base_url('warehouses/list.php'));
-            exit;
+            $existingWarehouse = $checkStmt->fetch();
+
+            if ($existingWarehouse) {
+                $errorMessage = 'Склад с таким названием уже существует.';
+            } else {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO warehouses
+                    (
+                        warehouse_name,
+                        city,
+                        street,
+                        house,
+                        `comment`
+                    )
+                    VALUES
+                    (
+                        :warehouse_name,
+                        :city,
+                        :street,
+                        :house,
+                        :comment
+                    )'
+                );
+
+                $stmt->execute([
+                    ':warehouse_name' => $formData['warehouse_name'],
+                    ':city' => $formData['city'],
+                    ':street' => $formData['street'],
+                    ':house' => $formData['house'],
+                    ':comment' => $formData['comment'] !== '' ? $formData['comment'] : null,
+                ]);
+
+                header('Location: ' . base_url('warehouses/list.php'));
+                exit;
+            }
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                $errorMessage = 'Склад с таким названием уже существует.';
+            } else {
+                $errorMessage = 'Не удалось сохранить склад.';
+            }
         } catch (Throwable $e) {
-            $errorMessage = $e->getMessage();
+            $errorMessage = 'Произошла непредвиденная ошибка при сохранении склада.';
         }
     }
 }
 
-require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
@@ -94,7 +115,7 @@ require_once __DIR__ . '/../includes/menu.php';
 
         <form method="post" action="<?= htmlspecialchars(base_url('warehouses/create.php'), ENT_QUOTES, 'UTF-8') ?>">
             <div class="form-grid">
-                <div class="form-group">
+                <div class="form-group form-group-full">
                     <label for="warehouse_name">Название склада *</label>
                     <input
                         type="text"
@@ -140,10 +161,12 @@ require_once __DIR__ . '/../includes/menu.php';
 
                 <div class="form-group form-group-full">
                     <label for="comment">Комментарий</label>
-                    <textarea
+                    <input
+                        type="text"
                         id="comment"
                         name="comment"
-                    ><?= htmlspecialchars($formData['comment'], ENT_QUOTES, 'UTF-8') ?></textarea>
+                        value="<?= htmlspecialchars($formData['comment'], ENT_QUOTES, 'UTF-8') ?>"
+                    >
                 </div>
             </div>
 

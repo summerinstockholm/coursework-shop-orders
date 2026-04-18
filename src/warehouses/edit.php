@@ -1,34 +1,8 @@
 <?php
 $pageTitle = 'Редактировать склад';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
-
 $warehouseId = (int)($_GET['id'] ?? 0);
-
-if ($warehouseId <= 0) {
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/header.php';
-    require_once __DIR__ . '/../includes/menu.php';
-    ?>
-    <main>
-        <section class="card">
-            <h2>Редактировать склад</h2>
-            <div class="error-box">
-                <strong>Ошибка:</strong> Некорректный идентификатор склада.
-            </div>
-            <p>
-                <a href="<?= htmlspecialchars(base_url('warehouses/list.php'), ENT_QUOTES, 'UTF-8') ?>">
-                    ← Вернуться к списку складов
-                </a>
-            </p>
-        </section>
-    </main>
-    <?php
-    require_once __DIR__ . '/../includes/footer.php';
-    exit;
-}
 
 $formData = [
     'warehouse_name' => '',
@@ -38,81 +12,111 @@ $formData = [
     'comment' => '',
 ];
 
-try {
-    $pdo = db();
+require_once __DIR__ . '/../includes/db.php';
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        foreach ($formData as $key => $value) {
-            $formData[$key] = trim((string)($_POST[$key] ?? ''));
-        }
+if ($warehouseId <= 0) {
+    $errorMessage = 'Некорректный идентификатор склада.';
+} else {
+    try {
+        $pdo = db();
 
-        $requiredFields = [
-            'warehouse_name' => 'Название склада',
-            'city' => 'Город',
-            'street' => 'Улица',
-            'house' => 'Дом',
-        ];
-
-        foreach ($requiredFields as $field => $label) {
-            if ($formData[$field] === '') {
-                $errorMessage = "Поле «{$label}» обязательно для заполнения.";
-                break;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            foreach ($formData as $key => $value) {
+                $formData[$key] = trim((string)($_POST[$key] ?? ''));
             }
-        }
 
-        if ($errorMessage === null) {
+            $requiredFields = [
+                'warehouse_name' => 'Название склада',
+                'city' => 'Город',
+                'street' => 'Улица',
+                'house' => 'Дом',
+            ];
+
+            foreach ($requiredFields as $field => $label) {
+                if ($formData[$field] === '') {
+                    $errorMessage = "Поле «{$label}» обязательно для заполнения.";
+                    break;
+                }
+            }
+
+            if ($errorMessage === null) {
+                $checkStmt = $pdo->prepare(
+                    'SELECT warehouse_id
+                     FROM warehouses
+                     WHERE warehouse_name = :warehouse_name
+                       AND warehouse_id <> :warehouse_id'
+                );
+
+                $checkStmt->execute([
+                    ':warehouse_name' => $formData['warehouse_name'],
+                    ':warehouse_id' => $warehouseId,
+                ]);
+
+                $existingWarehouse = $checkStmt->fetch();
+
+                if ($existingWarehouse) {
+                    $errorMessage = 'Склад с таким названием уже существует.';
+                } else {
+                    $stmt = $pdo->prepare(
+                        'UPDATE warehouses
+                         SET
+                            warehouse_name = :warehouse_name,
+                            city = :city,
+                            street = :street,
+                            house = :house,
+                            `comment` = :comment
+                         WHERE warehouse_id = :warehouse_id'
+                    );
+
+                    $stmt->execute([
+                        ':warehouse_name' => $formData['warehouse_name'],
+                        ':city' => $formData['city'],
+                        ':street' => $formData['street'],
+                        ':house' => $formData['house'],
+                        ':comment' => $formData['comment'] !== '' ? $formData['comment'] : null,
+                        ':warehouse_id' => $warehouseId,
+                    ]);
+
+                    header('Location: ' . base_url('warehouses/list.php'));
+                    exit;
+                }
+            }
+        } else {
             $stmt = $pdo->prepare(
-                'UPDATE warehouses
-                 SET
-                    warehouse_name = :warehouse_name,
-                    city = :city,
-                    street = :street,
-                    house = :house,
-                    comment = :comment
+                'SELECT
+                    warehouse_id,
+                    warehouse_name,
+                    city,
+                    street,
+                    house,
+                    `comment`
+                 FROM warehouses
                  WHERE warehouse_id = :warehouse_id'
             );
 
             $stmt->execute([
-                ':warehouse_name' => $formData['warehouse_name'],
-                ':city' => $formData['city'],
-                ':street' => $formData['street'],
-                ':house' => $formData['house'],
-                ':comment' => $formData['comment'] !== '' ? $formData['comment'] : null,
                 ':warehouse_id' => $warehouseId,
             ]);
 
-            header('Location: ' . base_url('warehouses/list.php'));
-            exit;
-        }
-    } else {
-        $stmt = $pdo->prepare(
-            'SELECT
-                warehouse_id,
-                warehouse_name,
-                city,
-                street,
-                house,
-                comment
-             FROM warehouses
-             WHERE warehouse_id = :warehouse_id'
-        );
+            $warehouse = $stmt->fetch();
 
-        $stmt->execute([
-            ':warehouse_id' => $warehouseId,
-        ]);
-
-        $warehouse = $stmt->fetch();
-
-        if (!$warehouse) {
-            $errorMessage = 'Склад не найден.';
-        } else {
-            foreach ($formData as $key => $value) {
-                $formData[$key] = (string)($warehouse[$key] ?? '');
+            if (!$warehouse) {
+                $errorMessage = 'Склад не найден.';
+            } else {
+                foreach ($formData as $key => $value) {
+                    $formData[$key] = (string)($warehouse[$key] ?? '');
+                }
             }
         }
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            $errorMessage = 'Склад с таким названием уже существует.';
+        } else {
+            $errorMessage = 'Не удалось сохранить изменения склада.';
+        }
+    } catch (Throwable $e) {
+        $errorMessage = 'Произошла непредвиденная ошибка при редактировании склада.';
     }
-} catch (Throwable $e) {
-    $errorMessage = $e->getMessage();
 }
 
 require_once __DIR__ . '/../includes/header.php';
@@ -135,10 +139,10 @@ require_once __DIR__ . '/../includes/menu.php';
             </div>
         <?php endif; ?>
 
-        <?php if ($errorMessage === null || $_SERVER['REQUEST_METHOD'] === 'POST'): ?>
+        <?php if ($warehouseId > 0 && ($errorMessage === null || $_SERVER['REQUEST_METHOD'] === 'POST')): ?>
             <form method="post" action="<?= htmlspecialchars(base_url('warehouses/edit.php?id=' . $warehouseId), ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-grid">
-                    <div class="form-group">
+                    <div class="form-group form-group-full">
                         <label for="warehouse_name">Название склада *</label>
                         <input
                             type="text"
@@ -184,10 +188,12 @@ require_once __DIR__ . '/../includes/menu.php';
 
                     <div class="form-group form-group-full">
                         <label for="comment">Комментарий</label>
-                        <textarea
+                        <input
+                            type="text"
                             id="comment"
                             name="comment"
-                        ><?= htmlspecialchars($formData['comment'], ENT_QUOTES, 'UTF-8') ?></textarea>
+                            value="<?= htmlspecialchars($formData['comment'], ENT_QUOTES, 'UTF-8') ?>"
+                        >
                     </div>
                 </div>
 

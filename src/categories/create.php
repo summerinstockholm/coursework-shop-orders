@@ -1,16 +1,18 @@
 <?php
 $pageTitle = 'Добавить категорию';
 
-require_once __DIR__ . '/../includes/db.php';
-
 $errorMessage = null;
 
 $formData = [
     'category_name' => '',
 ];
 
+require_once __DIR__ . '/../includes/db.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $formData['category_name'] = trim((string)($_POST['category_name'] ?? ''));
+    foreach ($formData as $key => $value) {
+        $formData[$key] = trim((string)($_POST[$key] ?? ''));
+    }
 
     if ($formData['category_name'] === '') {
         $errorMessage = 'Поле «Название категории» обязательно для заполнения.';
@@ -20,24 +22,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = db();
 
-            $stmt = $pdo->prepare(
-                'INSERT INTO categories (category_name)
-                 VALUES (:category_name)'
+            $checkStmt = $pdo->prepare(
+                'SELECT category_id
+                 FROM categories
+                 WHERE category_name = :category_name'
             );
 
-            $stmt->execute([
+            $checkStmt->execute([
                 ':category_name' => $formData['category_name'],
             ]);
 
-            header('Location: ' . base_url('categories/list.php'));
-            exit;
+            $existingCategory = $checkStmt->fetch();
+
+            if ($existingCategory) {
+                $errorMessage = 'Категория с таким названием уже существует.';
+            } else {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO categories
+                    (
+                        category_name
+                    )
+                    VALUES
+                    (
+                        :category_name
+                    )'
+                );
+
+                $stmt->execute([
+                    ':category_name' => $formData['category_name'],
+                ]);
+
+                header('Location: ' . base_url('categories/list.php'));
+                exit;
+            }
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                $errorMessage = 'Категория с таким названием уже существует.';
+            } else {
+                $errorMessage = 'Не удалось сохранить категорию.';
+            }
         } catch (Throwable $e) {
-            $errorMessage = $e->getMessage();
+            $errorMessage = 'Произошла непредвиденная ошибка при сохранении категории.';
         }
     }
 }
 
-require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/menu.php';
 ?>
