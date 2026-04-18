@@ -197,6 +197,22 @@ footer {
     font-size: 13px;
 }
 
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+    min-width: 1400px;
+}
+
+.table-responsive th,
+.table-responsive td {
+    white-space: nowrap;
+}
+
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;

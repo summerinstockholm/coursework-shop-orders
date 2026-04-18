@@ -51,45 +51,49 @@ require_once __DIR__ . '/../includes/menu.php';
         <?php elseif (empty($products)): ?>
             <p>Товары не найдены.</p>
         <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Название</th>
-                        <th>Описание</th>
-                        <th>Цена</th>
-                        <th>Остаток</th>
-                        <th>Категория</th>
-                        <th>Производитель</th>
-                        <th>Склад</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($products as $product): ?>
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td><?= (int)$product['product_id'] ?></td>
-                            <td><?= htmlspecialchars((string)$product['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)($product['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= number_format((float)$product['price'], 2, '.', ' ') ?></td>
-                            <td><?= (int)$product['stock_qty'] ?></td>
-                            <td><?= htmlspecialchars((string)$product['category_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$product['manufacturer_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$product['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td>
-                                <a href="<?= htmlspecialchars(base_url('products/edit.php?id=' . (int)$product['product_id']), ENT_QUOTES, 'UTF-8') ?>">
-                                    Редактировать
-                                </a>
-                                |
-                                <a href="<?= htmlspecialchars(base_url('products/delete.php?id=' . (int)$product['product_id']), ENT_QUOTES, 'UTF-8') ?>"
-                                   onclick="return confirm('Удалить товар?');">
-                                    Удалить
-                                </a>
-                            </td>
+                            <th>ID</th>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Цена</th>
+                            <th>Остаток</th>
+                            <th>Категория</th>
+                            <th>Производитель</th>
+                            <th>Склад</th>
+                            <th>Действия</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($products as $product): ?>
+                            <tr>
+                                <td><?= (int)$product['product_id'] ?></td>
+                                <td><?= htmlspecialchars((string)$product['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)($product['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= number_format((float)$product['price'], 2, '.', ' ') ?></td>
+                                <td><?= (int)$product['stock_qty'] ?></td>
+                                <td><?= htmlspecialchars((string)$product['category_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$product['manufacturer_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$product['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td>
+                                    <a href="<?= htmlspecialchars(base_url('products/edit.php?id=' . (int)$product['product_id']), ENT_QUOTES, 'UTF-8') ?>">
+                                        Редактировать
+                                    </a>
+                                    |
+                                    <a
+                                        href="<?= htmlspecialchars(base_url('products/delete.php?id=' . (int)$product['product_id']), ENT_QUOTES, 'UTF-8') ?>"
+                                        onclick="return confirm('Удалить товар?');"
+                                    >
+                                        Удалить
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </section>
 </main>

@@ -1,10 +1,10 @@
 <?php
-$pageTitle = 'Топ-10 товаров по количеству в заказах';
+$pageTitle = 'Топ-10 товаров';
 
 require_once __DIR__ . '/../includes/header.php';
 
-$errorMessage = null;
 $products = [];
+$errorMessage = null;
 
 try {
     $pdo = db();
@@ -50,34 +50,36 @@ require_once __DIR__ . '/../includes/menu.php';
         <?php elseif (empty($products)): ?>
             <p>Товары не найдены.</p>
         <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Место</th>
-                        <th>ID товара</th>
-                        <th>Название товара</th>
-                        <th>Категория</th>
-                        <th>Производитель</th>
-                        <th>Общее количество</th>
-                        <th>Сумма продаж</th>
-                        <th>Количество заказов</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($products as $index => $product): ?>
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td><?= (int)($index + 1) ?></td>
-                            <td><?= (int)$product['product_id'] ?></td>
-                            <td><?= htmlspecialchars((string)$product['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$product['category_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$product['manufacturer_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= (int)$product['total_quantity'] ?></td>
-                            <td><?= number_format((float)$product['total_sales_amount'], 2, '.', ' ') ?></td>
-                            <td><?= (int)$product['orders_count'] ?></td>
+                            <th>Место</th>
+                            <th>ID товара</th>
+                            <th>Название товара</th>
+                            <th>Категория</th>
+                            <th>Производитель</th>
+                            <th>Общее количество</th>
+                            <th>Сумма продаж</th>
+                            <th>Количество заказов</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($products as $index => $product): ?>
+                            <tr>
+                                <td><?= $index + 1 ?></td>
+                                <td><?= (int)$product['product_id'] ?></td>
+                                <td><?= htmlspecialchars((string)$product['product_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$product['category_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$product['manufacturer_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= (int)$product['total_quantity'] ?></td>
+                                <td><?= number_format((float)$product['total_sales_amount'], 2, '.', ' ') ?></td>
+                                <td><?= (int)$product['orders_count'] ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </section>
 </main>

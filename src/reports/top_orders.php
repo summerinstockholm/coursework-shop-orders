@@ -1,10 +1,10 @@
 <?php
-$pageTitle = 'Топ-10 заказов по сумме';
+$pageTitle = 'Топ-10 заказов';
 
 require_once __DIR__ . '/../includes/header.php';
 
-$errorMessage = null;
 $orders = [];
+$errorMessage = null;
 
 try {
     $pdo = db();
@@ -45,47 +45,49 @@ require_once __DIR__ . '/../includes/menu.php';
         <?php elseif (empty($orders)): ?>
             <p>Заказы не найдены.</p>
         <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Место</th>
-                        <th>ID заказа</th>
-                        <th>Дата заказа</th>
-                        <th>Покупатель</th>
-                        <th>Статус</th>
-                        <th>Сумма</th>
-                        <th>Способ оплаты</th>
-                        <th>Способ доставки</th>
-                        <th>Открыть</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($orders as $index => $order): ?>
-                        <?php
-                        $customerFullName = trim(
-                            (string)$order['last_name'] . ' ' .
-                            (string)$order['first_name'] . ' ' .
-                            (string)($order['middle_name'] ?? '')
-                        );
-                        ?>
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td><?= (int)($index + 1) ?></td>
-                            <td><?= (int)$order['order_id'] ?></td>
-                            <td><?= htmlspecialchars((string)$order['order_date'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($customerFullName, ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$order['status'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= number_format((float)$order['total_amount'], 2, '.', ' ') ?></td>
-                            <td><?= htmlspecialchars((string)$order['payment_method'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$order['delivery_method'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td>
-                                <a href="<?= htmlspecialchars(base_url('orders/view.php?id=' . (int)$order['order_id']), ENT_QUOTES, 'UTF-8') ?>">
-                                    Открыть
-                                </a>
-                            </td>
+                            <th>Место</th>
+                            <th>ID заказа</th>
+                            <th>Дата заказа</th>
+                            <th>Покупатель</th>
+                            <th>Статус</th>
+                            <th>Сумма</th>
+                            <th>Способ оплаты</th>
+                            <th>Способ доставки</th>
+                            <th>Открыть</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($orders as $index => $order): ?>
+                            <?php
+                            $customerFullName = trim(
+                                (string)$order['last_name'] . ' ' .
+                                (string)$order['first_name'] . ' ' .
+                                (string)($order['middle_name'] ?? '')
+                            );
+                            ?>
+                            <tr>
+                                <td><?= $index + 1 ?></td>
+                                <td><?= (int)$order['order_id'] ?></td>
+                                <td><?= htmlspecialchars((string)$order['order_date'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars($customerFullName, ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$order['status'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= number_format((float)$order['total_amount'], 2, '.', ' ') ?></td>
+                                <td><?= htmlspecialchars((string)$order['payment_method'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$order['delivery_method'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td>
+                                    <a href="<?= htmlspecialchars(base_url('orders/view.php?id=' . (int)$order['order_id']), ENT_QUOTES, 'UTF-8') ?>">
+                                        Открыть
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </section>
 </main>

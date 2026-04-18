@@ -46,41 +46,45 @@ require_once __DIR__ . '/../includes/menu.php';
         <?php elseif (empty($warehouses)): ?>
             <p>Склады не найдены.</p>
         <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Название склада</th>
-                        <th>Город</th>
-                        <th>Улица</th>
-                        <th>Дом</th>
-                        <th>Комментарий</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($warehouses as $warehouse): ?>
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td><?= (int)$warehouse['warehouse_id'] ?></td>
-                            <td><?= htmlspecialchars((string)$warehouse['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$warehouse['city'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$warehouse['street'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)$warehouse['house'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string)($warehouse['comment'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                            <td>
-                                <a href="<?= htmlspecialchars(base_url('warehouses/edit.php?id=' . (int)$warehouse['warehouse_id']), ENT_QUOTES, 'UTF-8') ?>">
-                                    Редактировать
-                                </a>
-                                |
-                                <a href="<?= htmlspecialchars(base_url('warehouses/delete.php?id=' . (int)$warehouse['warehouse_id']), ENT_QUOTES, 'UTF-8') ?>"
-                                   onclick="return confirm('Удалить склад?');">
-                                    Удалить
-                                </a>
-                            </td>
+                            <th>ID</th>
+                            <th>Название склада</th>
+                            <th>Город</th>
+                            <th>Улица</th>
+                            <th>Дом</th>
+                            <th>Комментарий</th>
+                            <th>Действия</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($warehouses as $warehouse): ?>
+                            <tr>
+                                <td><?= (int)$warehouse['warehouse_id'] ?></td>
+                                <td><?= htmlspecialchars((string)$warehouse['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$warehouse['city'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$warehouse['street'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)$warehouse['house'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars((string)($warehouse['comment'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td>
+                                    <a href="<?= htmlspecialchars(base_url('warehouses/edit.php?id=' . (int)$warehouse['warehouse_id']), ENT_QUOTES, 'UTF-8') ?>">
+                                        Редактировать
+                                    </a>
+                                    |
+                                    <a
+                                        href="<?= htmlspecialchars(base_url('warehouses/delete.php?id=' . (int)$warehouse['warehouse_id']), ENT_QUOTES, 'UTF-8') ?>"
+                                        onclick="return confirm('Удалить склад?');"
+                                    >
+                                        Удалить
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </section>
 </main>
