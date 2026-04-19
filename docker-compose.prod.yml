@@ -15,10 +15,10 @@ services:
       APP_BASE_URL: "${APP_BASE_URL}"
       DB_HOST: "${DB_HOST}"
       DB_PORT: "${DB_PORT}"
+      DB_NAME: "${MYSQL_DATABASE}"
+      DB_USER: "${MYSQL_USER}"
+      DB_PASSWORD: "${MYSQL_PASSWORD}"
       DB_CHARSET: "${DB_CHARSET}"
-      MYSQL_DATABASE: "${MYSQL_DATABASE}"
-      MYSQL_USER: "${MYSQL_USER}"
-      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
     volumes:
       - ./src:/var/www/html:ro
       - ./deploy/apache/000-default.prod.conf:/etc/apache2/sites-available/000-default.conf:ro
