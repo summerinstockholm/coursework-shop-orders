@@ -24,6 +24,7 @@ src/config/config.local.php
 .htpasswd
 **/.htpasswd
 !.env.example
+!deploy/env/.env.prod.example
 
 # Optional local secret directories
 secrets/
